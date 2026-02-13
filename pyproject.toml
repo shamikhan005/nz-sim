@@ -1,0 +1,13 @@
+[project]
+name = "nz-sim"
+version = "0.1.0"
+description = "a reasoning engine that verifies, challenges, and simulates emissions logic."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.129.0",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "uvicorn>=0.40.0",
+]
