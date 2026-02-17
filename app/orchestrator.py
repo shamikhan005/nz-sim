@@ -28,7 +28,7 @@ def run_full_analysis(input_data):
         simulation_report
     )
 
-    return {
+    final_payload = {
         "baseline": baseline,
         "logical_audit": logical_report,
         "leak_detection": leak_report,
