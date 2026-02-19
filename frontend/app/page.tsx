@@ -13,6 +13,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedInsightCards, setExpandedInsightCards] = useState<Record<number, boolean>>({});
 
   const [formData, setFormData] = useState({
     grid: 55,
@@ -87,6 +88,69 @@ export default function Home() {
         })),
       ]
     : [];
+
+  const executiveParagraphs =
+    result?.executive_summary?.split("\n").filter((p: string) => p.trim() !== "") ?? [];
+
+  const getOneLineSummary = (text: string, maxLength = 130) => {
+    const normalized = text.replace(/\s+/g, " ").trim();
+    const sentenceEnd = normalized.search(/[.!?]\s/);
+    const firstSentence = sentenceEnd >= 0 ? normalized.slice(0, sentenceEnd + 1) : normalized;
+    return firstSentence.length > maxLength
+      ? `${firstSentence.slice(0, maxLength - 3)}...`
+      : firstSentence;
+  };
+
+  const executiveInsights = [
+    {
+      title: "Audit Reality Check",
+      accent: "border-l-red-500",
+      iconClass: "text-red-500 bg-red-50",
+      chipClass: "bg-red-50 text-red-700 border-red-200",
+      chipLabel: `${result?.baseline?.delta_tons?.toFixed?.(2) ?? "0.00"} t gap`,
+      paragraph: executiveParagraphs[0],
+      iconPath: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+    },
+    {
+      title: "Risk & Leakage Profile",
+      accent: "border-l-amber-500",
+      iconClass: "text-amber-500 bg-amber-50",
+      chipClass: "bg-amber-50 text-amber-700 border-amber-200",
+      chipLabel: `Leak risk ${result?.leak_detection?.leakage_risk_score ?? "--"}/100`,
+      paragraph: executiveParagraphs[1],
+      iconPath: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
+    },
+    {
+      title: "Strategic Directive",
+      accent: "border-l-green-800",
+      iconClass: "text-green-800 bg-green-50",
+      chipClass: "bg-green-50 text-green-800 border-green-200",
+      chipLabel: `Primary path: ${result?.strategic_feasibility?.business_feasibility_ranking?.[0]?.scenario_name ?? "Review options"}`,
+      paragraph: executiveParagraphs[2],
+      iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+    },
+  ].filter((insight) => Boolean(insight.paragraph));
+
+  const tldrBullets = [
+    `Reality: ${result?.baseline?.delta_tons?.toFixed?.(2) ?? "0.00"} t CO2 discrepancy between reported and computed baseline.`,
+    `Risk: Leakage score is ${result?.leak_detection?.leakage_risk_score ?? "--"}/100, indicating material reporting exposure.`,
+    `Action: Prioritize ${result?.strategic_feasibility?.business_feasibility_ranking?.[0]?.scenario_name ?? "the highest-feasibility mitigation path"} first.`,
+  ];
+
+  const toggleInsightCard = (cardIndex: number) => {
+    setExpandedInsightCards((prev) => ({
+      ...prev,
+      [cardIndex]: !prev[cardIndex],
+    }));
+  };
+
+  const setAllInsightCards = (expanded: boolean) => {
+    const nextState: Record<number, boolean> = {};
+    executiveInsights.forEach((_, index) => {
+      nextState[index] = expanded;
+    });
+    setExpandedInsightCards(nextState);
+  };
 
   return (
     <div className={`${saira.className} min-h-screen bg-slate-50 p-8 text-slate-900`}>
@@ -165,7 +229,7 @@ export default function Home() {
                   disabled={loading}
                   className="w-full bg-green-800 hover:bg-green-900 text-white font-medium py-3 rounded-none transition-colors disabled:bg-green-500"
                 >
-                  {loading ? "Running K2 Agent Chain..." : "Run AI Audit"}
+                  {loading ? "Running K2 Agent Chain..." : "Analyze Net-Zero Claim"}
                 </button>
               </div>
             </div>
@@ -294,56 +358,84 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-4">
-                  <h2 className="text-lg font-bold text-slate-900 border-b pb-2">C-Suite Briefing & Synthesis</h2>
-                  
+                  <div className="flex items-center justify-between gap-3 border-b pb-2">
+                    <h2 className="text-lg font-bold text-slate-900">C-Suite Briefing & Synthesis</h2>
+                    {executiveInsights.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAllInsightCards(true)}
+                          className="text-xs font-semibold px-3 py-1 border border-green-200 bg-green-50 text-green-800 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-700/40"
+                        >
+                          Expand all
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllInsightCards(false)}
+                          className="text-xs font-semibold px-3 py-1 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-700/40"
+                        >
+                          Collapse all
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {result.executive_summary ? (
-                    <div className="grid grid-cols-1 gap-4">
-                      {(() => {
-                        const paragraphs = result.executive_summary.split('\n').filter((p: string) => p.trim() !== '');
-                        return (
-                          <>
-                            {paragraphs[0] && (
-                              <div className="bg-white p-5 rounded-none border-l-4 border-l-red-500 shadow-sm flex gap-4 items-start">
-                                <div className="text-red-500 mt-0.5 bg-red-50 p-2 rounded-none shrink-0">
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </div>
-                                <div>
-                                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">Audit Reality Check</h3>
-                                  <p className="text-sm text-slate-700 leading-relaxed">{paragraphs[0]}</p>
-                                </div>
-                              </div>
-                            )}
+                    <>
+                      <div className="bg-green-50 border border-green-200 p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-green-900 mb-2">TL;DR</h3>
+                        <ul className="space-y-1.5">
+                          {tldrBullets.map((bullet, idx) => (
+                            <li key={idx} className="text-sm text-slate-800">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
 
-                            {paragraphs[1] && (
-                              <div className="bg-white p-5 rounded-none border-l-4 border-l-amber-500 shadow-sm flex gap-4 items-start">
-                                <div className="text-amber-500 mt-0.5 bg-amber-50 p-2 rounded-none shrink-0">
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                </div>
-                                <div>
-                                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">Risk & Leakage Profile</h3>
-                                  <p className="text-sm text-slate-700 leading-relaxed">{paragraphs[1]}</p>
-                                </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        {executiveInsights.map((insight, index) => {
+                          const isExpanded = Boolean(expandedInsightCards[index]);
+                          const detailsId = `insight-details-${index}`;
+                          return (
+                            <div key={insight.title} className={`bg-white p-5 rounded-none border-l-4 shadow-sm flex gap-4 items-start ${insight.accent}`}>
+                              <div className={`${insight.iconClass} mt-0.5 p-2 rounded-none shrink-0`}>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={insight.iconPath} />
+                                </svg>
                               </div>
-                            )}
-
-                            {paragraphs[2] && (
-                              <div className="bg-white p-5 rounded-none border-l-4 border-l-green-800 shadow-sm flex gap-4 items-start">
-                                <div className="text-green-800 mt-0.5 bg-green-50 p-2 rounded-none shrink-0">
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              <div className="w-full">
+                                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{insight.title}</h3>
+                                  <span className={`text-[11px] font-semibold border px-2 py-0.5 ${insight.chipClass}`}>{insight.chipLabel}</span>
                                 </div>
-                                <div>
-                                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-1">Strategic Directive</h3>
-                                  <p className="text-sm text-slate-700 leading-relaxed">{paragraphs[2]}</p>
-                                </div>
+                                <p className="text-sm font-semibold text-slate-800 leading-relaxed">
+                                  {getOneLineSummary(insight.paragraph)}
+                                </p>
+                                <button
+                                  type="button"
+                                  aria-expanded={isExpanded}
+                                  aria-controls={detailsId}
+                                  onClick={() => toggleInsightCard(index)}
+                                  className="mt-2 text-xs font-semibold text-green-800 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-green-700/40"
+                                >
+                                  {isExpanded ? "Show less" : "Expand details"}
+                                </button>
+                                {isExpanded && (
+                                  <p id={detailsId} className="mt-2 text-sm text-slate-700 leading-relaxed">
+                                    {insight.paragraph}
+                                  </p>
+                                )}
                               </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
                     <div className="bg-red-50 border border-red-200 p-4 rounded-none">
-                      <p className="text-red-500 font-medium">Executive summary not generated. Check backend Layer 5.</p>
+                      <p className="text-red-600 font-semibold">Executive summary is not available yet.</p>
+                      <p className="text-sm text-red-700 mt-1">Run the audit again to generate concise briefing insights and expandable details.</p>
                     </div>
                   )}
                 </div>
