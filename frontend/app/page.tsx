@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Saira } from "next/font/google";
 
 const saira = Saira({
@@ -55,7 +55,7 @@ export default function Home() {
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/analyze", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,10 +81,12 @@ export default function Home() {
         {
           name: "True Baseline",
           emissions: result.baseline.baseline_co2_tons,
+          fill: "#ef4444",
         },
         ...result.counterfactual_simulation.scenarios.map((scenario: any) => ({
           name: scenario.name,
           emissions: scenario.estimated_new_co2_tons,
+          fill: "#10b981",
         })),
       ]
     : [];
@@ -310,15 +312,27 @@ export default function Home() {
                         <Tooltip 
                           cursor={{ fill: '#f8fafc' }}
                           contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          formatter={(value: number) => [`${value.toFixed(2)} tCO2`, "Emissions"]}
+                          formatter={(value: number | undefined) => [`${value != null ? value.toFixed(2) : "--"} tCO2`, "Emissions"]}
                         />
-                        <Bar dataKey="emissions" radius={[4, 4, 0, 0]} maxBarSize={56} minPointSize={2}>
-                          {
-                            chartData.map((_: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#10b981'} />
-                            ))
-                          }
-                        </Bar>
+                        <Bar
+                          dataKey="emissions"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={56}
+                          minPointSize={2}
+                          shape={(props: { x?: number; y?: number; width?: number; height?: number; payload?: { fill?: string } }) => {
+                            const fill = props.payload?.fill ?? "#10b981";
+                            return (
+                              <rect
+                                x={props.x}
+                                y={props.y}
+                                width={props.width}
+                                height={props.height}
+                                fill={fill}
+                                rx={4}
+                              />
+                            );
+                          }}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
